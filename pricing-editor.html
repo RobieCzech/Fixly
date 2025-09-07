@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor ceníku</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .editor-section { background: #fff9; border-radius: 18px; box-shadow: 0 2px 12px #0002; padding: 32px; max-width: 900px; margin: 80px auto;}
+        .editor-section h2 { margin-bottom: 24px;}
+        .editor-row { margin-bottom: 18px; }
+        .editor-row select, .editor-row input { margin-right: 10px; padding: 4px 8px; border-radius: 6px; border: 1px solid #ccc;}
+        .editor-row button { padding: 4px 12px; border-radius: 6px; border: none; background: #3f51b5; color: #fff; font-weight: bold; cursor: pointer;}
+        .editor-row button.delete { background: #c62828;}
+        .editor-row button.rename { background: #ff9800;}
+        .editor-row button:hover { opacity: 0.8;}
+        .editor-list { margin-top: 30px;}
+        .editor-list h3 { margin-top: 20px;}
+        .editor-list ul { list-style: none; padding-left: 0;}
+        .editor-list li { margin-bottom: 6px;}
+        .inline-edit { border: 1px solid #3f51b5; border-radius: 4px; padding: 2px 6px; }
+        .cat-actions, .dev-actions, .model-actions { margin-left: 10px; }
+        .cat-actions button, .dev-actions button, .model-actions button { margin-right: 4px; }
+    </style>
+</head>
+<body>
+    <div class="editor-section">
+        <h2>Editor ceníku</h2>
+        <!-- Přidání nové služby -->
+        <div class="editor-row">
+            <input type="text" id="newService" placeholder="Nová služba (např. Výměna displeje)">
+            <button id="addServiceBtn">Přidat službu</button>
+        </div>
+        <!-- Přidání nového zařízení a modelu -->
+        <div class="editor-row">
+            <select id="serviceSelect"></select>
+            <input type="text" id="newDevice" placeholder="Nové zařízení (např. iPhone)">
+            <input type="text" id="newModel" placeholder="Nový model (např. iPhone 12)">
+            <input type="number" id="newPrice" placeholder="Cena (např. 2500)">
+            <button id="addDeviceModelBtn">Přidat zařízení/model</button>
+        </div>
+        <div class="editor-list" id="editorList"></div>
+    </div>
+    <script>
+        // Načti nebo inicializuj data
+        let cenikData = JSON.parse(localStorage.getItem('cenikData')) || {
+            "Výměna displeje": { "iPhone": { "iPhone 11": 2500 } },
+            "Výměna baterie": { "iPhone": { "iPhone 11": 1200 } },
+            "Oprava notebooku": { "HP": { "Pavilion": 1200 } }
+        };
+
+        function saveData() {
+            localStorage.setItem('cenikData', JSON.stringify(cenikData));
+        }
+
+        function renderServiceSelect() {
+            const sel = document.getElementById('serviceSelect');
+            sel.innerHTML = '';
+            Object.keys(cenikData).forEach(service => {
+                sel.innerHTML += `<option value="${service}">${service}</option>`;
+            });
+        }
+
+        function renderList() {
+            const listDiv = document.getElementById('editorList');
+            listDiv.innerHTML = '';
+            Object.keys(cenikData).forEach(service => {
+                listDiv.innerHTML += `
+                    <h3>
+                        <span class="service-name" data-service="${service}">${service}</span>
+                        <span class="cat-actions">
+                            <button class="rename" onclick="renameService('${service}')">Přejmenovat</button>
+                            <button class="delete" onclick="deleteService('${service}')">Smazat</button>
+                        </span>
+                    </h3>
+                    <ul id="ul-${service}"></ul>
+                `;
+                const ul = document.getElementById(`ul-${service}`);
+                Object.keys(cenikData[service]).forEach(device => {
+                    ul.innerHTML += `
+                        <li>
+                            <b class="device-name" data-service="${service}" data-device="${device}">${device}</b>
+                            <span class="dev-actions">
+                                <button class="rename" onclick="renameDevice('${service}','${device}')">Přejmenovat</button>
+                                <button class="delete" onclick="deleteDevice('${service}','${device}')">Smazat</button>
+                            </span>
+                            <ul id="ul-${service}-${device}"></ul>
+                        </li>
+                    `;
+                    const ulDev = document.getElementById(`ul-${service}-${device}`);
+                    Object.keys(cenikData[service][device]).forEach(model => {
+                        const cena = cenikData[service][device][model];
+                        ulDev.innerHTML += `
+                            <li>
+                                <span class="model-name" data-service="${service}" data-device="${device}" data-model="${model}">${model}</span>:
+                                <input type="number" class="inline-edit" value="${cena}" min="0" style="width:80px" onchange="editPrice('${service}','${device}','${model}',this.value)">
+                                Kč
+                                <span class="model-actions">
+                                    <button class="rename" onclick="renameModel('${service}','${device}','${model}')">Přejmenovat</button>
+                                    <button class="delete" onclick="deleteModel('${service}','${device}','${model}')">Smazat</button>
+                                </span>
+                            </li>
+                        `;
+                    });
+                });
+            });
+        }
+
+        // Přidání nové služby
+        document.getElementById('addServiceBtn').onclick = function() {
+            const newService = document.getElementById('newService').value.trim();
+            if (!newService) return alert('Zadejte název služby!');
+            if (cenikData[newService]) return alert('Tato služba již existuje!');
+            cenikData[newService] = {};
+            saveData();
+            renderServiceSelect();
+            renderList();
+            document.getElementById('newService').value = '';
+        };
+
+        // Přidání nového zařízení/modelu
+        document.getElementById('addDeviceModelBtn').onclick = function() {
+            const service = document.getElementById('serviceSelect').value;
+            const device = document.getElementById('newDevice').value.trim();
+            const model = document.getElementById('newModel').value.trim();
+            const price = parseInt(document.getElementById('newPrice').value, 10);
+            if (!service || !device || !model || !price) {
+                alert('Vyplňte všechny položky!');
+                return;
+            }
+            if (!cenikData[service][device]) cenikData[service][device] = {};
+            cenikData[service][device][model] = price;
+            saveData();
+            renderList();
+            document.getElementById('newDevice').value = '';
+            document.getElementById('newModel').value = '';
+            document.getElementById('newPrice').value = '';
+        };
+
+        // Smazání služby
+        window.deleteService = function(service) {
+            if (!confirm('Opravdu smazat celou službu?')) return;
+            delete cenikData[service];
+            saveData();
+            renderServiceSelect();
+            renderList();
+        };
+
+        // Smazání zařízení
+        window.deleteDevice = function(service, device) {
+            if (!confirm('Opravdu smazat celé zařízení?')) return;
+            delete cenikData[service][device];
+            saveData();
+            renderList();
+        };
+
+        // Smazání modelu
+        window.deleteModel = function(service, device, model) {
+            if (!confirm('Opravdu smazat tento model?')) return;
+            delete cenikData[service][device][model];
+            if (Object.keys(cenikData[service][device]).length === 0) delete cenikData[service][device];
+            saveData();
+            renderList();
+        };
+
+        // Editace ceny
+        window.editPrice = function(service, device, model, value) {
+            const cena = parseInt(value, 10);
+            if (isNaN(cena) || cena < 0) return alert('Zadejte platnou cenu!');
+            cenikData[service][device][model] = cena;
+            saveData();
+        };
+
+        // Přejmenování služby
+        window.renameService = function(service) {
+            const newName = prompt('Zadejte nový název služby:', service);
+            if (!newName || newName === service) return;
+            if (cenikData[newName]) return alert('Tato služba již existuje!');
+            cenikData[newName] = cenikData[service];
+            delete cenikData[service];
+            saveData();
+            renderServiceSelect();
+            renderList();
+        };
+
+        // Přejmenování zařízení
+        window.renameDevice = function(service, device) {
+            const newName = prompt('Zadejte nový název zařízení:', device);
+            if (!newName || newName === device) return;
+            if (cenikData[service][newName]) return alert('Toto zařízení již existuje!');
+            cenikData[service][newName] = cenikData[service][device];
+            delete cenikData[service][device];
+            saveData();
+            renderList();
+        };
+
+        // Přejmenování modelu
+        window.renameModel = function(service, device, model) {
+            const newName = prompt('Zadejte nový název modelu:', model);
+            if (!newName || newName === model) return;
+            if (cenikData[service][device][newName]) return alert('Tento model již existuje!');
+            cenikData[service][device][newName] = cenikData[service][device][model];
+            delete cenikData[service][device][model];
+            saveData();
+            renderList();
+        };
+
+        // Synchronizace s pricing.html v reálném čase (BroadcastChannel)
+        const bc = new BroadcastChannel('cenikDataChannel');
+        function broadcastUpdate() {
+            bc.postMessage({type: 'update', data: cenikData});
+        }
+        bc.onmessage = (ev) => {
+            if (ev.data.type === 'update') {
+                cenikData = ev.data.data;
+                saveData();
+                renderServiceSelect();
+                renderList();
+            }
+        };
+        // Uprav saveData, aby vždy vysílal změnu
+        function saveData() {
+            localStorage.setItem('cenikData', JSON.stringify(cenikData));
+            broadcastUpdate();
+        }
+
+        // Inicializace
+        renderServiceSelect();
+        renderList();
+    </script>
+</body>
+</html>
