@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telefonní servis - Ceník</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Font Awesome pro ikony -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        .cenik-wrapper {
+            background: rgba(255,255,255,0.7);
+            border-radius: 18px;
+            box-shadow: 0 2px 12px #0001;
+            padding: 32px 20px;
+            margin-bottom: 40px;
+        }
+        .cenik-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 24px;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 16px;
+        }
+        .cenik-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .cenik-label {
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+            margin-right: 18px;
+            min-width: 210px;
+            font-size: 1.13rem;
+            color: #3f51b5;
+            letter-spacing: 0.5px;
+        }
+        .cenik-label i {
+            font-size: 1.5rem;
+            margin-right: 10px;
+            color: #c0a285;
+            filter: drop-shadow(0 2px 8px #c0a28533);
+        }
+        .cenik-row select {
+            margin: 0 10px 0 0;
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+        .cenik-cena {
+            font-size: 1.2rem;
+            color: #3f51b5;
+            font-weight: bold;
+            margin-left: 12px;
+        }
+        @media (max-width: 700px) {
+            .cenik-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            .cenik-label {
+                min-width: unset;
+                margin-bottom: 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <img src="images/logo.png" alt="Logo" class="fixed-logo">
+    <header>
+        <nav>
+            <ul>
+                <li><a href="index.html">Domů</a></li>
+                <li><a href="services.html">Služby</a></li>
+                <li><a href="pricing.html" class="active">Ceník</a></li>
+                <li><a href="contact.html">Kontakt</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section id="pricing">
+        <h2>
+  <i class="fas fa-tags" style="color:#c0a285;margin-right:10px;"></i>
+  Ceník služeb
+</h2>
+        <div class="cenik-wrapper" id="cenik-dynamic"></div>
+    </section>
+    <script>
+        // Mapování názvů služeb na ikonky (případně rozšiř dle potřeby)
+        const serviceIcons = {
+            'displej':    { icon: 'fa-mobile-alt',      color: '#c0a285' },
+            'baterie':    { icon: 'fa-battery-full',    color: '#c0a285' },
+            'notebook':   { icon: 'fa-laptop',          color: '#c0a285' },
+            'diagnostika':{ icon: 'fa-stethoscope',     color: '#c0a285' },
+            'oprava':     { icon: 'fa-screwdriver-wrench', color: '#c0a285' }
+        };
+
+        // Vrací HTML pro ikonku podle názvu služby
+        function getServiceIcon(serviceName) {
+            const name = serviceName.toLowerCase();
+            if (name.includes('displej')) return `<i class="fas fa-mobile-alt"></i>`;
+            if (name.includes('baterie')) return `<i class="fas fa-battery-full"></i>`;
+            if (name.includes('notebook') || name.includes('pc')) return `<i class="fas fa-laptop"></i>`;
+            if (name.includes('diagnostik')) return `<i class="fas fa-stethoscope"></i>`;
+            if (name.includes('oprava')) return `<i class="fas fa-screwdriver-wrench"></i>`;
+            return `<i class="fas fa-tools"></i>`;
+        }
+
+        async function getCenikData() {
+            try {
+                const res = await fetch('get-cenik.php');
+                if (!res.ok) throw new Error('PHP offline');
+                return await res.json();
+            } catch(e) {
+                // Fallback na LocalStorage
+                try {
+                    return JSON.parse(localStorage.getItem('cenikData')) || {};
+                } catch(e) { return {}; }
+            }
+        }
+
+        async function renderCenik() {
+            const cenikData = await getCenikData();
+            const container = document.getElementById('cenik-dynamic');
+            container.innerHTML = '';
+
+            Object.keys(cenikData).forEach(service => {
+                // Vytvoř řádek pro každou službu
+                const row = document.createElement('div');
+                row.className = 'cenik-row';
+
+                // Label služby s ikonou
+                const label = document.createElement('div');
+                label.className = 'cenik-label';
+                label.innerHTML = `${getServiceIcon(service)}${service}`;
+                row.appendChild(label);
+
+                // Výběr zařízení
+                const zarizeniSelect = document.createElement('select');
+                zarizeniSelect.innerHTML = '<option value="">Vyberte zařízení</option>';
+                Object.keys(cenikData[service]).forEach(zarizeni => {
+                    zarizeniSelect.innerHTML += `<option value="${zarizeni}">${zarizeni}</option>`;
+                });
+                row.appendChild(zarizeniSelect);
+
+                // Výběr modelu
+                const modelSelect = document.createElement('select');
+                modelSelect.disabled = true;
+                modelSelect.innerHTML = '<option value="">Nejprve vyberte zařízení</option>';
+                row.appendChild(modelSelect);
+
+                // Zobrazení ceny
+                const cenaSpan = document.createElement('span');
+                cenaSpan.className = 'cenik-cena';
+                row.appendChild(cenaSpan);
+
+                // Události
+                zarizeniSelect.addEventListener('change', () => {
+                    const zarizeni = zarizeniSelect.value;
+                    cenaSpan.textContent = '';
+                    modelSelect.innerHTML = '';
+                    if (!zarizeni) {
+                        modelSelect.disabled = true;
+                        modelSelect.innerHTML = '<option value="">Nejprve vyberte zařízení</option>';
+                        return;
+                    }
+                    modelSelect.disabled = false;
+                    modelSelect.innerHTML = '<option value="">Vyberte model</option>';
+                    Object.keys(cenikData[service][zarizeni]).forEach(model => {
+                        modelSelect.innerHTML += `<option value="${model}">${model}</option>`;
+                    });
+                });
+
+                modelSelect.addEventListener('change', () => {
+                    const zarizeni = zarizeniSelect.value;
+                    const model = modelSelect.value;
+                    if (!model) {
+                        cenaSpan.textContent = '';
+                        return;
+                    }
+                    const cena = cenikData[service][zarizeni][model];
+                    cenaSpan.textContent = cena ? `${cena} Kč` : 'Na dotaz';
+                });
+
+                container.appendChild(row);
+            });
+
+            if (Object.keys(cenikData).length === 0) {
+                container.innerHTML = '<p>Žádné služby nejsou k dispozici. Přidejte je v editoru.</p>';
+            }
+        }
+
+        // --- Synchronizace v reálném čase ---
+        const bc = new BroadcastChannel('cenikDataChannel');
+        bc.onmessage = (ev) => {
+            if (ev.data.type === 'update') {
+                renderCenik();
+            }
+        };
+
+    // --- Prvotní vykreslení ---
+    renderCenik();
+
+        // --- Pro jistotu i při změně localStorage (jiné okno, fallback) ---
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'cenikData') renderCenik();
+        });
+    </script>
+</body>
+</html>

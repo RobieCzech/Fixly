@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telefonní servis - Kontakt</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Font Awesome pro ikony -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        /* Úprava bílého pozadí kontaktu */
+        .contact {
+            background-color: rgba(243, 238, 238, 0.649);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+            max-width: 1200px;
+            width: 100%;
+            margin: 110px auto 40px auto;
+            padding: 40px 20px 40px 20px;
+            box-sizing: border-box;
+        }
+        .contact-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 40px;
+            justify-content: space-between;
+        }
+        .contact-info, .contact-form-container {
+            flex: 1 1 350px;
+            min-width: 300px;
+        }
+        .contact-form-container {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+            padding: 32px 24px 24px 24px;
+            margin-top: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .contact-form-container h3 {
+            margin-top: 0;
+            margin-bottom: 18px;
+            color: #3f51b5;
+            display: flex;
+            align-items: center;
+            font-size: 1.3rem;
+        }
+        .contact-form-container h3::before {
+            content: "\f4ad";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            color: #c0a285;
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+        .contact-form-container form {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .contact-form-container label {
+            font-weight: 600;
+            margin-bottom: 2px;
+            color: #222;
+        }
+        .contact-form-container input,
+        .contact-form-container textarea {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 1rem;
+            font-family: inherit;
+            resize: vertical;
+        }
+        .contact-form-container textarea {
+            min-height: 80px;
+        }
+        .contact-form-container button {
+            margin-top: 10px;
+            padding: 12px 0;
+            background: #ffd60a;
+            color: #222;
+            font-weight: 700;
+            border-radius: 30px;
+            border: none;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            transition: background 0.2s, color 0.2s, transform 0.2s;
+            cursor: pointer;
+        }
+        .contact-form-container button:hover {
+            background: #fff;
+            color: #00b4d8;
+            transform: translateY(-3px) scale(1.05);
+        }
+        @media (max-width: 900px) {
+            .contact-container {
+                flex-direction: column;
+                gap: 30px;
+            }
+            .contact-info, .contact-form-container {
+                min-width: unset;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Logo mimo hlavičku -->
+    <img src="images/logo.png" alt="Logo" class="fixed-logo">
+    <header>
+        <nav>
+            <ul>
+                <li><a href="index.html">Domů</a></li>
+                <li><a href="services.html">Služby</a></li>
+                <li><a href="pricing.html">Ceník</a></li>
+                <li><a href="contact.html" class="active">Kontakt</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section id="contact" class="contact">
+        <div class="contact-container">
+            <div class="contact-info">
+                <h2>
+                  <i class="fas fa-envelope-open-text" style="color:#c0a285;margin-right:10px;"></i>
+                  Kontaktujte nás
+                </h2>
+                <p>Pokud máte jakékoli dotazy nebo chcete objednat opravu, neváhejte nás kontaktovat. Jsme tu pro vás!</p>
+                <div class="contact-details">
+                    <div class="info-item">
+                        <i class="fas fa-map-marker-alt" style="color:#3f51b5;"></i>
+                        <p>Adresa: Brno</p>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-phone-alt" style="color:#3f51b5;"></i>
+                        <p>Telefon: <strong>+420 735 050 515</strong></p>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-envelope" style="color:#3f51b5;"></i>
+                        <p>E-mail: <strong>info@fixly.cz</strong></p>
+                    </div>
+                </div>
+            </div>
+            <div class="contact-form-container">
+                <h3>Napište nám</h3>
+                <form action="send-mail.php" method="post">
+                    <label for="name">Jméno:</label>
+                    <input type="text" id="name" name="name" required>
+
+                    <label for="email">E-mail:</label>
+                    <input type="email" id="email" name="email" required>
+
+                    <label for="message">Zpráva:</label>
+                    <textarea id="message" name="message" required></textarea>
+
+                    <button type="submit"><i class="fas fa-paper-plane"></i> Odeslat</button>
+                </form>
+            </div>
+        </div>
+    </section>
+    <script>
+document.querySelector('.contact-form-container form').onsubmit = async function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const data = new FormData(form);
+    const response = await fetch('send-mail.php', { method: 'POST', body: data });
+    const text = await response.text();
+    alert(text === 'OK' ? 'Zpráva byla úspěšně odeslána.' : text);
+    if (text === 'OK') form.reset();
+};
+</script>
+</body>
+</html>
